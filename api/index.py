@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 # Thêm thư mục gốc vào path để import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.api_utils import call_openrouter_api
+from utils.api_utils import call_gemini_api
 
 app = Flask(__name__, 
           template_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"),
@@ -119,7 +119,7 @@ def debug_topics():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-# API tạo câu hỏi
+# API tạo câu hỏi - Sử dụng Gemini API
 @app.route('/api/generate', methods=['POST'])
 def generate():
     try:
@@ -131,17 +131,21 @@ def generate():
         topic = data.get('topic')
         num_questions = data.get('num_questions', 5)
         question_type = data.get('question_type', 'trac_nghiem')
+        gemini_key = data.get('gemini_key', '')  # Lấy Gemini API key từ request
         
         if not subject or not topic:
             return jsonify({'error': 'Subject and topic are required'}), 400
+            
+        if not gemini_key:
+            return jsonify({'error': 'Gemini API key is required'}), 400
         
         app.logger.info(f"Generating questions: {subject} - {topic}, {num_questions} questions, type: {question_type}")
         
         # Tạo prompt dựa trên loại câu hỏi
         prompt = create_prompt(subject, topic, num_questions, question_type)
         
-        # Gọi OpenRouter API
-        response_text = call_openrouter_api(prompt, max_tokens=4000)
+        # Gọi Gemini API thay vì OpenRouter API
+        response_text = call_gemini_api(prompt, gemini_key, max_tokens=4000)
         
         # Kiểm tra nếu response_text chứa thông báo lỗi
         if response_text and isinstance(response_text, str) and response_text.startswith("Lỗi"):
