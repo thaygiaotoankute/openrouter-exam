@@ -7,6 +7,7 @@
     { "src": "templates/**/*", "use": "@vercel/static" }
   ],
   "routes": [
+    { "src": "/data/(.*)", "dest": "/data/$1" },
     { "src": "/static/(.*)", "dest": "/static/$1" },
     { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/(.*)", "dest": "/api/index.py" }
