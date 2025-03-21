@@ -20,7 +20,7 @@
                         <h5 class="mb-0">Chọn chủ đề</h5>
                     </div>
                     <div class="card-body">
-                        <div id="topicTree" class="overflow-auto" style="max-height: 400px;">
+                        <div id="topicTree" class="overflow-auto" style="max-height: 600px;">
                             <!-- Nội dung cây chủ đề sẽ được thêm vào bằng JavaScript -->
                         </div>
                     </div>
@@ -74,8 +74,15 @@
                             <div class="form-text">Để lấy Gemini API Key, truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></div>
                         </div>
                         
+                        <div class="mb-3">
+                            <label class="form-label">Chủ đề đã chọn:</label>
+                            <div id="selectedTopicInfo" class="alert alert-info">
+                                Vui lòng chọn chủ đề từ danh sách bên trái
+                            </div>
+                        </div>
+                        
                         <button id="generateBtn" class="btn btn-primary w-100 mt-3" onclick="generateQuestions()" disabled>
-                            Tạo câu hỏi trắc nghiệm
+                            Tạo câu hỏi
                         </button>
                     </div>
                 </div>
@@ -88,7 +95,7 @@
                         <h5 class="mb-0">Câu hỏi đã tạo</h5>
                     </div>
                     <div class="card-body">
-                        <div id="generatedQuestions" class="overflow-auto" style="max-height: 400px;">
+                        <div id="generatedQuestions" class="overflow-auto" style="max-height: 600px;">
                             <!-- Nội dung câu hỏi sẽ được thêm vào đây -->
                         </div>
                         <div class="mt-3">
