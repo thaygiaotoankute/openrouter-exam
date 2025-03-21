@@ -11,7 +11,10 @@
     { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/(.*)", "dest": "/api/index.py" }
   ],
-  "env": {
-    "OPENROUTER_API_KEY": "@openrouter_api_key"
+  "functions": {
+    "api/index.py": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
   }
 }
