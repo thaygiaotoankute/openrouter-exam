@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ tạo đề thi</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container py-4">
+        <h1 class="text-center mb-4">Công cụ tạo đề thi toán học</h1>
+        
+        <div class="row">
+            <!-- Phần chọn chủ đề -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Chọn chủ đề</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="topic-tree" class="overflow-auto" style="max-height: 500px;">
+                            <!-- Topics will be loaded here -->
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Phần cấu hình câu hỏi -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Tùy chọn câu hỏi</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="num-questions" class="form-label">Số câu hỏi:</label>
+                            <input type="number" class="form-control" id="num-questions" min="1" max="10" value="5">
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button id="generate-trac-nghiem" class="btn btn-primary">Tạo câu hỏi trắc nghiệm</button>
+                            <button id="generate-dung-sai" class="btn btn-primary">Tạo câu hỏi đúng sai</button>
+                            <button id="generate-tra-loi-ngan" class="btn btn-primary">Tạo câu hỏi trả lời ngắn</button>
+                            <button id="generate-tu-luan" class="btn btn-primary">Tạo câu hỏi tự luận</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Phần hiển thị câu hỏi tạo ra -->
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Câu hỏi đã tạo</h5>
+                        <div>
+                            <button id="copy-button" class="btn btn-sm btn-outline-secondary" disabled>Sao chép</button>
+                            <button id="clear-button" class="btn btn-sm btn-outline-danger" disabled>Xóa</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="result-area" class="form-control" style="height: 500px; overflow-y: auto; white-space: pre-wrap;">
+                            <!-- Generated questions will appear here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading indicator -->
+        <div id="loading-overlay" class="d-none">
+            <div class="spinner-border text-light" role="status">
+                <span class="visually-hidden">Đang tạo câu hỏi...</span>
+            </div>
+            <p class="text-light mt-2">Đang tạo câu hỏi, vui lòng đợi...</p>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
