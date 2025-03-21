@@ -8,7 +8,7 @@ import traceback
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-def call_gemini_api(prompt, gemini_key, max_tokens=66536):
+def call_gemini_api(prompt, gemini_key, max_tokens=8192):
     """Gọi Gemini API để tạo câu hỏi"""
     try:
         if not gemini_key:
@@ -24,7 +24,7 @@ def call_gemini_api(prompt, gemini_key, max_tokens=66536):
         
         GEMINI_API_URL = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
-            "gemini-2.0-flash-thinking-exp-01-21:generateContent?key=" + gemini_key
+            "gemini-2.0-pro-exp-02-05:generateContent?key=" + gemini_key
         )
         
         payload = {
