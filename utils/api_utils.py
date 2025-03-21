@@ -24,7 +24,7 @@ def call_gemini_api(prompt, gemini_key, max_tokens=8192):
         
         GEMINI_API_URL = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
-            "gemini-2.0-pro-exp-02-05:generateContent?key=" + gemini_key
+            "gemini-2.0-flash:generateContent?key=" + gemini_key
         )
         
         payload = {
