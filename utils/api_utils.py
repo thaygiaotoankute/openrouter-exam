@@ -8,7 +8,7 @@ import traceback
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-def call_gemini_api(prompt, gemini_key, max_tokens=4000):
+def call_gemini_api(prompt, gemini_key, max_tokens=66536):
     """Gọi Gemini API để tạo câu hỏi"""
     try:
         if not gemini_key:
@@ -18,13 +18,13 @@ def call_gemini_api(prompt, gemini_key, max_tokens=4000):
         logger.info(f"Calling Gemini API with prompt length: {len(prompt)}")
         
         # Cắt bớt prompt nếu quá dài (Gemini có giới hạn đầu vào)
-        if len(prompt) > 30000:
+        if len(prompt) > 60000:
             logger.warning(f"Prompt too long ({len(prompt)} chars), truncating")
-            prompt = prompt[:30000]
+            prompt = prompt[:60000]
         
         GEMINI_API_URL = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
-            "gemini-1.5-flash-002:generateContent?key=" + gemini_key
+            "gemini-2.0-flash-thinking-exp-01-21:generateContent?key=" + gemini_key
         )
         
         payload = {
