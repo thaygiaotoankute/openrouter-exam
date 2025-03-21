@@ -180,7 +180,7 @@ def generate():
         prompt = create_prompt(subject, topic + prompt_level, num_questions, question_type)
         
         # Gọi Gemini API
-        response_text = call_gemini_api(prompt, gemini_key, max_tokens=4000)
+        response_text = call_gemini_api(prompt, gemini_key, max_tokens=66536)
         
         if response_text and isinstance(response_text, str) and response_text.startswith("Lỗi"):
             app.logger.error(f"Error response: {response_text}")
