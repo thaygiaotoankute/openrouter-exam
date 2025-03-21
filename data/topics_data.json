@@ -1,6 +1,3 @@
-import json
-
-# Dữ liệu chủ đề từ populate_topics
 topics = {
     "Lớp 6": {
         "SỐ VÀ ĐẠI SỐ": {
@@ -1457,9 +1454,3 @@ topics = {
     }
   }
 }
-
-# Lưu vào file JSON
-with open('data/topics_data.json', 'w', encoding='utf-8') as f:
-    json.dump(topics, f, ensure_ascii=False, indent=2)
-
-print("Đã tạo file topics_data.json thành công!")
