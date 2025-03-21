@@ -4,6 +4,7 @@ let selectedSubject = '';
 let selectedTopic = '';
 let selectedLevel = ''; // Thêm biến cho mức độ (Nhận biết, Thông hiểu...)
 let selectedPath = []; // Đường dẫn đầy đủ đến chủ đề
+let shouldRenderMath = false; // Mặc định không render MathJax
 
 // Hàm được gọi khi trang được tải
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,6 +18,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Kiểm tra Gemini API Key khi người dùng nhập
     document.getElementById('geminiKey').addEventListener('input', updateGenerateButton);
+    
+    // Thêm listener cho toggle render MathJax
+    document.getElementById('renderMathToggle').addEventListener('change', function() {
+        shouldRenderMath = this.checked;
+        // Nếu có nội dung đã tạo, render lại
+        const questionsDiv = document.getElementById('generatedQuestions');
+        if (questionsDiv.dataset.originalContent) {
+            displayGeneratedContent(questionsDiv.dataset.originalContent);
+        }
+    });
 });
 
 // Hàm tải danh sách chủ đề từ API
@@ -257,6 +268,30 @@ function getQuestionTypeName(type) {
     }
 }
 
+// Hàm hiển thị nội dung đã tạo
+function displayGeneratedContent(content) {
+    const questionsDiv = document.getElementById('generatedQuestions');
+    
+    // Lưu nội dung gốc trong dataset
+    questionsDiv.dataset.originalContent = content;
+    
+    // Hiển thị nội dung dựa trên cài đặt render
+    if (shouldRenderMath) {
+        // Hiển thị bình thường và render MathJax
+        questionsDiv.innerHTML = content;
+        if (window.MathJax) {
+            MathJax.typesetPromise();
+        }
+    } else {
+        // Hiển thị dưới dạng raw code
+        questionsDiv.innerHTML = `<pre class="raw-content">${content}</pre>`;
+    }
+    
+    // Kích hoạt nút sao chép và xóa
+    document.getElementById('copyBtn').disabled = false;
+    document.getElementById('clearBtn').disabled = false;
+}
+
 // Hàm gửi request tạo câu hỏi
 function generateQuestions() {
     // Lấy dữ liệu từ form
@@ -311,17 +346,8 @@ function generateQuestions() {
         return response.json();
     })
     .then(data => {
-        // Hiển thị câu hỏi
-        document.getElementById('generatedQuestions').innerHTML = data.text;
-        
-        // Render công thức toán học
-        if (window.MathJax) {
-            MathJax.typesetPromise();
-        }
-        
-        // Kích hoạt nút sao chép và xóa
-        document.getElementById('copyBtn').disabled = false;
-        document.getElementById('clearBtn').disabled = false;
+        // Hiển thị nội dung đã tạo
+        displayGeneratedContent(data.text);
     })
     .catch(error => {
         console.error('Error:', error);
@@ -332,10 +358,12 @@ function generateQuestions() {
 
 // Hàm sao chép câu hỏi đã tạo
 function copyQuestions() {
-    const questionsContent = document.getElementById('generatedQuestions').innerText;
+    // Lấy nội dung gốc từ dataset nếu có
+    const questionsDiv = document.getElementById('generatedQuestions');
+    const content = questionsDiv.dataset.originalContent || questionsDiv.innerText;
     
-    if (questionsContent) {
-        navigator.clipboard.writeText(questionsContent)
+    if (content) {
+        navigator.clipboard.writeText(content)
             .then(() => {
                 // Thông báo sao chép thành công
                 alert('Đã sao chép nội dung vào clipboard!');
@@ -350,6 +378,7 @@ function copyQuestions() {
 // Hàm xóa câu hỏi đã tạo
 function clearQuestions() {
     document.getElementById('generatedQuestions').innerHTML = '';
+    document.getElementById('generatedQuestions').dataset.originalContent = '';
     document.getElementById('copyBtn').disabled = true;
     document.getElementById('clearBtn').disabled = true;
 }
