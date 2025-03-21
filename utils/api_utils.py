@@ -1,6 +1,7 @@
 import os
 import base64
 import requests
+import json
 import xml.etree.ElementTree as ET
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
@@ -116,8 +117,12 @@ def call_openrouter_api(prompt, max_tokens=4000, temperature=0.7):
     
     try:
         # Lấy API key thông qua giải mã RSA
-        api_key = get_openrouter_token()
-        logger.info("Successfully retrieved API key for OpenRouter")
+        try:
+            api_key = get_openrouter_token()
+            logger.info("Successfully retrieved API key for OpenRouter")
+        except Exception as e:
+            logger.error(f"Failed to get OpenRouter API key: {str(e)}")
+            return f"Lỗi lấy API key: {str(e)}"
         
         api_url = "https://openrouter.ai/api/v1/chat/completions"
         model = "deepseek/deepseek-r1-zero:free"  # Hoặc model khác theo nhu cầu
@@ -139,25 +144,33 @@ def call_openrouter_api(prompt, max_tokens=4000, temperature=0.7):
         }
         
         logger.info(f"Sending request to OpenRouter API for model: {model}")
-        response = requests.post(api_url, headers=headers, json=data, timeout=180)
-        logger.info(f"OpenRouter API response status code: {response.status_code}")
         
-        response.raise_for_status()
-        result = response.json()
-        
-        if 'choices' in result and len(result['choices']) > 0:
-            content = result['choices'][0]['message']['content']
-            logger.info(f"Received response with {len(content)} characters")
-            return content
-        else:
-            logger.warning("Empty or invalid response from OpenRouter API")
-            logger.warning(f"Response: {result}")
-            return ""
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request to OpenRouter API failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise Exception(f"Request to OpenRouter API failed: {str(e)}")
+        try:
+            response = requests.post(api_url, headers=headers, json=data, timeout=180)
+            logger.info(f"OpenRouter API response status code: {response.status_code}")
+            
+            # Thêm logging chi tiết hơn
+            if response.status_code != 200:
+                logger.error(f"OpenRouter API error: {response.status_code}")
+                logger.error(f"Response content: {response.text[:500]}")
+                return f"Lỗi từ OpenRouter API: Status code {response.status_code}, {response.text[:200]}"
+            
+            result = response.json()
+            
+            if 'choices' in result and len(result['choices']) > 0:
+                content = result['choices'][0]['message']['content']
+                logger.info(f"Received response with {len(content)} characters")
+                return content
+            else:
+                logger.warning("Empty or invalid response from OpenRouter API")
+                logger.warning(f"Response: {result}")
+                return f"Phản hồi không hợp lệ từ OpenRouter API: {json.dumps(result)[:200]}"
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error requesting OpenRouter API: {str(e)}")
+            return f"Lỗi kết nối đến OpenRouter API: {str(e)}"
+            
     except Exception as e:
         logger.error(f"Error calling OpenRouter API: {str(e)}")
         logger.error(traceback.format_exc())
-        raise
+        return f"Lỗi gọi OpenRouter API: {str(e)}"
