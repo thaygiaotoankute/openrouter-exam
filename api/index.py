@@ -123,7 +123,7 @@ def create_prompt(subject, topic, num_questions, question_type):
     Hãy tạo câu hỏi với nội dung phong phú, đa dạng và có tính ứng dụng cao. Sử dụng hình vẽ TikZ khi cần thiết để minh họa các khái niệm hoặc bài toán.
     """
     
-    # Định dạng dựa trên loại câu hỏi (các phần giống như trước)
+    # Định dạng dựa trên loại câu hỏi
     if question_type == 'trac_nghiem':
         format_prompt = """
         Định dạng câu hỏi trắc nghiệm:
