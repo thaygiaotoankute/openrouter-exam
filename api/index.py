@@ -2,6 +2,11 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import os
 import json
 import sys
+import logging
+import traceback
+
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 # Thêm thư mục gốc vào path để import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,12 +26,98 @@ def index():
 @app.route('/api/topics', methods=['GET'])
 def get_topics():
     try:
-        topics_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "topics_data.json")
-        with open(topics_path, 'r', encoding='utf-8') as f:
-            topics = json.load(f)
-        return jsonify(topics)
+        app.logger.info("Getting topics data")
+        
+        # Thử nhiều đường dẫn khác nhau để tìm file
+        possible_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "topics_data.json"),
+            os.path.join("data", "topics_data.json"),
+            os.path.join("/var/task", "data", "topics_data.json"),
+            os.path.join(os.getcwd(), "data", "topics_data.json")
+        ]
+        
+        for path in possible_paths:
+            app.logger.info(f"Trying path: {path}")
+            if os.path.exists(path):
+                app.logger.info(f"File found at: {path}")
+                with open(path, 'r', encoding='utf-8') as f:
+                    topics = json.load(f)
+                return jsonify(topics)
+            else:
+                app.logger.info(f"File not found at: {path}")
+        
+        # Nếu không tìm thấy file, thử hard-code một phiên bản đơn giản
+        app.logger.warning("Using hardcoded topics as fallback")
+        fallback_topics = {
+            "Lớp 10": {
+                "ĐẠI SỐ": [
+                    "Mệnh đề - Tập hợp",
+                    "Hàm số và đồ thị",
+                    "Phương trình - Hệ phương trình",
+                    "Bất đẳng thức - Bất phương trình"
+                ],
+                "HÌNH HỌC VÀ ĐO LƯỜNG": [
+                    "Hệ thức lượng trong tam giác. Vectơ",
+                    "Phương pháp tọa độ trong mặt phẳng"
+                ]
+            },
+            "Lớp 11": {
+                "ĐẠI SỐ VÀ GIẢI TÍCH": [
+                    "Hàm số lượng giác",
+                    "Tổ hợp - Xác suất",
+                    "Dãy số - Cấp số"
+                ],
+                "HÌNH HỌC": [
+                    "Phép dời hình và phép đồng dạng",
+                    "Quan hệ vuông góc trong không gian"
+                ]
+            },
+            "Lớp 12": {
+                "GIẢI TÍCH": [
+                    "Hàm số",
+                    "Nguyên hàm - Tích phân",
+                    "Số phức"
+                ],
+                "HÌNH HỌC": [
+                    "Khối đa diện",
+                    "Mặt tròn xoay"
+                ]
+            }
+        }
+        return jsonify(fallback_topics)
+        
     except Exception as e:
+        app.logger.error(f"Error getting topics: {str(e)}")
+        app.logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+# Endpoint debug để kiểm tra nội dung file
+@app.route('/api/debug-topics', methods=['GET'])
+def debug_topics():
+    try:
+        possible_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "topics_data.json"),
+            os.path.join("data", "topics_data.json"),
+            os.path.join("/var/task", "data", "topics_data.json"),
+            os.path.join(os.getcwd(), "data", "topics_data.json")
+        ]
+        
+        results = {}
+        for path in possible_paths:
+            results[path] = {
+                "exists": os.path.exists(path),
+                "content": None
+            }
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        results[path]["content"] = f.read(500)  # Đọc 500 ký tự đầu tiên
+                except Exception as e:
+                    results[path]["error"] = str(e)
+        
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 # API tạo câu hỏi
 @app.route('/api/generate', methods=['POST'])
@@ -44,28 +135,49 @@ def generate():
         if not subject or not topic:
             return jsonify({'error': 'Subject and topic are required'}), 400
         
+        app.logger.info(f"Generating questions: {subject} - {topic}, {num_questions} questions, type: {question_type}")
+        
         # Tạo prompt dựa trên loại câu hỏi
         prompt = create_prompt(subject, topic, num_questions, question_type)
         
         # Gọi OpenRouter API
         response_text = call_openrouter_api(prompt, max_tokens=4000)
         
+        # Kiểm tra nếu response_text chứa thông báo lỗi
+        if response_text and isinstance(response_text, str) and response_text.startswith("Lỗi"):
+            app.logger.error(f"Error response: {response_text}")
+            return jsonify({'error': response_text}), 500
+            
         if response_text:
             return jsonify({'text': response_text})
         else:
             return jsonify({'error': 'Failed to generate response'}), 500
             
     except Exception as e:
+        app.logger.error(f"Error generating questions: {str(e)}")
+        app.logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 # Hàm tạo prompt
 def create_prompt(subject, topic, num_questions, question_type):
     # Đọc TikZ examples
     try:
-        tikz_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "tikz_examples.txt")
-        with open(tikz_path, 'r', encoding='utf-8') as f:
-            tikz_examples = f.read()
-    except:
+        # Thử nhiều đường dẫn khác nhau
+        possible_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "tikz_examples.txt"),
+            os.path.join("data", "tikz_examples.txt"),
+            os.path.join("/var/task", "data", "tikz_examples.txt")
+        ]
+        
+        tikz_examples = "# Không thể tải mã TikZ mẫu"
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    tikz_examples = f.read()
+                break
+    except Exception as e:
+        app.logger.error(f"Error loading TikZ examples: {str(e)}")
         tikz_examples = "# Không thể tải mã TikZ mẫu"
     
     # Phần chung của prompt
