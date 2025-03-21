@@ -18,9 +18,9 @@ def call_gemini_api(prompt, gemini_key, max_tokens=66536):
         logger.info(f"Calling Gemini API with prompt length: {len(prompt)}")
         
         # Cắt bớt prompt nếu quá dài (Gemini có giới hạn đầu vào)
-        if len(prompt) > 60000:
+        if len(prompt) > 30000:
             logger.warning(f"Prompt too long ({len(prompt)} chars), truncating")
-            prompt = prompt[:60000]
+            prompt = prompt[:30000]
         
         GEMINI_API_URL = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
