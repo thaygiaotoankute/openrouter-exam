@@ -4,20 +4,29 @@ import requests
 import xml.etree.ElementTree as ET
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
+import logging
+
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
 
 def load_rsa_private_key_from_xml(xml_str):
     """Load RSA private key từ định dạng XML"""
-    root = ET.fromstring(xml_str)
-    def get_int(tag):
-        text = root.find(tag).text
-        return int.from_bytes(base64.b64decode(text), 'big')
-    n = get_int('Modulus')
-    e = get_int('Exponent')
-    d = get_int('D')
-    p = get_int('P')
-    q = get_int('Q')
-    key = RSA.construct((n, e, d, p, q))
-    return key
+    try:
+        root = ET.fromstring(xml_str)
+        def get_int(tag):
+            text = root.find(tag).text
+            return int.from_bytes(base64.b64decode(text), 'big')
+        n = get_int('Modulus')
+        e = get_int('Exponent')
+        d = get_int('D')
+        p = get_int('P')
+        q = get_int('Q')
+        key = RSA.construct((n, e, d, p, q))
+        return key
+    except Exception as e:
+        logger.error(f"Error loading RSA key from XML: {str(e)}")
+        raise
 
 def decrypt_api_key(encrypted_key_base64, rsa_private_key):
     """Decrypt API key"""
@@ -30,14 +39,18 @@ def decrypt_api_key(encrypted_key_base64, rsa_private_key):
             raise ValueError("Decryption failed")
         return decrypted.decode('utf-8')
     except Exception as e:
+        logger.error(f"Error decrypting API key: {str(e)}")
         raise ValueError(f"Error decrypting API key: {str(e)}")
 
 def get_openrouter_token():
-    """Get API key from GitHub (tận dụng từ get_mineru_token)"""
+    """Get API key từ biến môi trường hoặc từ GitHub"""
     # Ưu tiên dùng biến môi trường để Vercel có thể cấu hình
     if os.environ.get('OPENROUTER_API_KEY'):
+        logger.info("Using API key from environment variable")
         return os.environ.get('OPENROUTER_API_KEY')
     
+    # Nếu không có biến môi trường, dùng phương thức giải mã từ GitHub
+    logger.info("Fetching encrypted API key from GitHub")
     PRIVATE_KEY_XML = """<RSAKeyValue>
 <Modulus>pWVItQwZ7NCPcBhSL4rqJrwh4OQquiPVtqTe4cqxO7o+UjYNzDPfLkfKAvR8k9ED4lq2TU11zEj8p2QZAM7obUlK4/HVexzfZd0qsXlCy5iaWoTQLXbVdzjvkC4mkO5TaX3Mpg/+p4oZjk1iS68tQFmju5cT19dcsPh554ICk8U=</Modulus>
 <Exponent>AQAB</Exponent>
@@ -63,41 +76,48 @@ def get_openrouter_token():
         token = decrypt_api_key(encrypted_keys[0], rsa_private_key)
         if not token:
             raise ValueError("Decrypted API key is empty")
+        logger.info("Successfully obtained API key from GitHub")
         return token
     except Exception as e:
+        logger.error(f"Error getting API key: {str(e)}")
         raise Exception(f"Error getting API key: {str(e)}")
 
 def call_openrouter_api(prompt, max_tokens=4000, temperature=0.7):
     """Call OpenRouter API using the decrypted token"""
-    api_key = get_openrouter_token()
-    api_url = "https://openrouter.ai/api/v1/chat/completions"
-    model = "deepseek/deepseek-r1-zero:free"  # Hoặc model khác theo nhu cầu
-    
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}",
-        "HTTP-Referer": "https://exam-generator-app.com",  # Thay bằng domain thực tế
-        "X-Title": "Exam Generator"  # Tên ứng dụng
-    }
-    
-    data = {
-        "model": model,
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
-        "max_tokens": max_tokens,
-        "temperature": temperature
-    }
+    logger.info(f"Calling OpenRouter API with prompt length: {len(prompt)}")
     
     try:
+        api_key = get_openrouter_token()
+        api_url = "https://openrouter.ai/api/v1/chat/completions"
+        model = "deepseek/deepseek-r1-zero:free"  # Hoặc model khác theo nhu cầu
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "https://exam-generator-app.com",  # Thay bằng domain thực tế
+            "X-Title": "Exam Generator"  # Tên ứng dụng
+        }
+        
+        data = {
+            "model": model,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        }
+        
+        logger.info(f"Sending request to OpenRouter API for model: {model}")
         response = requests.post(api_url, headers=headers, json=data, timeout=180)
         response.raise_for_status()
         result = response.json()
         
         if 'choices' in result and len(result['choices']) > 0:
+            logger.info(f"Received response with {len(result['choices'][0]['message']['content'])} characters")
             return result['choices'][0]['message']['content']
         else:
+            logger.warning("Empty or invalid response from OpenRouter API")
             return ""
     except Exception as e:
-        print(f"Error calling OpenRouter API: {str(e)}")
+        logger.error(f"Error calling OpenRouter API: {str(e)}")
         raise
