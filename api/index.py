@@ -50,38 +50,34 @@ def get_topics():
         app.logger.warning("Using hardcoded topics as fallback")
         fallback_topics = {
             "Lớp 10": {
-                "ĐẠI SỐ": [
-                    "Mệnh đề - Tập hợp",
-                    "Hàm số và đồ thị",
-                    "Phương trình - Hệ phương trình",
-                    "Bất đẳng thức - Bất phương trình"
-                ],
-                "HÌNH HỌC VÀ ĐO LƯỜNG": [
-                    "Hệ thức lượng trong tam giác. Vectơ",
-                    "Phương pháp tọa độ trong mặt phẳng"
-                ]
-            },
-            "Lớp 11": {
-                "ĐẠI SỐ VÀ GIẢI TÍCH": [
-                    "Hàm số lượng giác",
-                    "Tổ hợp - Xác suất",
-                    "Dãy số - Cấp số"
-                ],
-                "HÌNH HỌC": [
-                    "Phép dời hình và phép đồng dạng",
-                    "Quan hệ vuông góc trong không gian"
-                ]
-            },
-            "Lớp 12": {
-                "GIẢI TÍCH": [
-                    "Hàm số",
-                    "Nguyên hàm - Tích phân",
-                    "Số phức"
-                ],
-                "HÌNH HỌC": [
-                    "Khối đa diện",
-                    "Mặt tròn xoay"
-                ]
+                "ĐẠI SỐ": {
+                    "1. Hàm số và đồ thị": {
+                        "Hàm số": {
+                            "Nhận biết": [
+                                "Nhận biết được khái niệm hàm số",
+                                "Hiểu được cách biểu diễn hàm số"
+                            ],
+                            "Thông hiểu": [
+                                "Phân biệt được các loại hàm số",
+                                "Xác định được miền xác định và tập giá trị"
+                            ]
+                        }
+                    }
+                },
+                "HÌNH HỌC": {
+                    "1. Véc tơ": {
+                        "Véc tơ và phép toán": {
+                            "Nhận biết": [
+                                "Nhận biết được khái niệm véc tơ",
+                                "Biết cách biểu diễn véc tơ"
+                            ],
+                            "Thông hiểu": [
+                                "Hiểu được các phép toán trên véc tơ",
+                                "Biết cách tính tổng, hiệu véc tơ"
+                            ]
+                        }
+                    }
+                }
             }
         }
         return jsonify(fallback_topics)
@@ -92,32 +88,67 @@ def get_topics():
         return jsonify({'error': str(e)}), 500
 
 # Endpoint debug để kiểm tra nội dung file
-@app.route('/api/debug-topics', methods=['GET'])
-def debug_topics():
+@app.route('/api/check-topics-structure', methods=['GET'])
+def check_topics_structure():
     try:
+        # Lấy dữ liệu chủ đề giống như API /api/topics
+        topics_data = None
         possible_paths = [
             os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "topics_data.json"),
             os.path.join("data", "topics_data.json"),
-            os.path.join("/var/task", "data", "topics_data.json"),
-            os.path.join(os.getcwd(), "data", "topics_data.json")
+            os.path.join("/var/task", "data", "topics_data.json")
         ]
         
-        results = {}
         for path in possible_paths:
-            results[path] = {
-                "exists": os.path.exists(path),
-                "content": None
-            }
             if os.path.exists(path):
-                try:
-                    with open(path, 'r', encoding='utf-8') as f:
-                        results[path]["content"] = f.read(500)  # Đọc 500 ký tự đầu tiên
-                except Exception as e:
-                    results[path]["error"] = str(e)
+                with open(path, 'r', encoding='utf-8') as f:
+                    topics_data = json.load(f)
+                break
         
-        return jsonify(results)
+        if not topics_data:
+            return jsonify({
+                "error": "File not found",
+                "fallback": "Using hardcoded data",
+                "structure": "object with nested arrays"
+            })
+            
+        # Trả về phân tích cấu trúc
+        structure_info = {
+            "is_object": isinstance(topics_data, dict),
+            "top_level_keys": list(topics_data.keys()) if isinstance(topics_data, dict) else None,
+            "sample_structure": {},
+            "detailed_structure": {}
+        }
+        
+        # Phân tích cấu trúc chi tiết hơn
+        if isinstance(topics_data, dict) and len(topics_data) > 0:
+            first_grade = list(topics_data.keys())[0]
+            structure_info["sample_structure"]["first_grade"] = first_grade
+            structure_info["sample_structure"]["first_grade_type"] = type(topics_data[first_grade]).__name__
+            
+            if isinstance(topics_data[first_grade], dict) and len(topics_data[first_grade]) > 0:
+                first_subject = list(topics_data[first_grade].keys())[0]
+                structure_info["sample_structure"]["first_subject"] = first_subject
+                structure_info["sample_structure"]["first_subject_type"] = type(topics_data[first_grade][first_subject]).__name__
+                structure_info["sample_structure"]["is_array"] = isinstance(topics_data[first_grade][first_subject], list)
+                
+                # Thêm mẫu dữ liệu
+                structure_info["sample_data"] = topics_data[first_grade][first_subject]
+                
+                # Phân tích chi tiết từng cấp
+                for grade in topics_data:
+                    structure_info["detailed_structure"][grade] = {}
+                    if isinstance(topics_data[grade], dict):
+                        for subject in topics_data[grade]:
+                            structure_info["detailed_structure"][grade][subject] = {
+                                "type": type(topics_data[grade][subject]).__name__,
+                                "is_array": isinstance(topics_data[grade][subject], list)
+                            }
+        
+        return jsonify(structure_info)
+        
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()})
 
 # API tạo câu hỏi - Sử dụng Gemini API
 @app.route('/api/generate', methods=['POST'])
@@ -129,9 +160,10 @@ def generate():
             
         subject = data.get('subject')
         topic = data.get('topic')
+        level = data.get('level', '')  # Mức độ (Nhận biết, Thông hiểu...)
         num_questions = data.get('num_questions', 5)
         question_type = data.get('question_type', 'trac_nghiem')
-        gemini_key = data.get('gemini_key', '')  # Lấy Gemini API key từ request
+        gemini_key = data.get('gemini_key', '')
         
         if not subject or not topic:
             return jsonify({'error': 'Subject and topic are required'}), 400
@@ -139,15 +171,17 @@ def generate():
         if not gemini_key:
             return jsonify({'error': 'Gemini API key is required'}), 400
         
-        app.logger.info(f"Generating questions: {subject} - {topic}, {num_questions} questions, type: {question_type}")
+        app.logger.info(f"Generating questions: {subject} - {topic} - {level}, {num_questions} questions, type: {question_type}")
         
-        # Tạo prompt dựa trên loại câu hỏi
-        prompt = create_prompt(subject, topic, num_questions, question_type)
+        # Nếu có mức độ, thêm vào prompt
+        prompt_level = f" (mức độ {level})" if level else ""
         
-        # Gọi Gemini API thay vì OpenRouter API
+        # Tạo prompt
+        prompt = create_prompt(subject, topic + prompt_level, num_questions, question_type)
+        
+        # Gọi Gemini API
         response_text = call_gemini_api(prompt, gemini_key, max_tokens=4000)
         
-        # Kiểm tra nếu response_text chứa thông báo lỗi
         if response_text and isinstance(response_text, str) and response_text.startswith("Lỗi"):
             app.logger.error(f"Error response: {response_text}")
             return jsonify({'error': response_text}), 500
