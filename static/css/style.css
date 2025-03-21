@@ -1,56 +1,69 @@
-body {
-    background-color: #f5f5f5;
+/* Tùy chỉnh giao diện cây chủ đề */
+#topicTree .btn {
+    margin-bottom: 5px;
+    text-align: left;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    transition: all 0.2s;
 }
 
-.card {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 1rem;
-}
-
-#topic-tree {
-    font-size: 0.9rem;
-}
-
-#topic-tree ul {
-    list-style-type: none;
-    padding-left: 1.2rem;
-}
-
-#topic-tree li {
-    padding: 3px 0;
-}
-
-#topic-tree .topic-item {
-    cursor: pointer;
-    padding: 2px 5px;
-    border-radius: 3px;
-}
-
-#topic-tree .topic-item:hover {
-    background-color: #f0f0f0;
-}
-
-#topic-tree .topic-item.selected {
-    background-color: #e2f0fd;
+#topicTree .btn.active {
     font-weight: bold;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-#result-area {
-    font-family: 'Courier New', monospace;
-    font-size: 0.9rem;
-    background-color: #fafafa;
+/* Hiệu ứng hover */
+#topicTree .btn:hover:not(.active) {
+    background-color: rgba(0, 123, 255, 0.1);
 }
 
-#loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+/* Tùy chỉnh các cấp độ */
+#topicTree .btn-outline-primary.active {
+    background-color: #007bff;
+    color: white;
+}
+
+#topicTree .btn-outline-secondary.active {
+    background-color: #6c757d;
+    color: white;
+}
+
+#topicTree .btn-outline-info.active {
+    background-color: #17a2b8;
+    color: white;
+}
+
+#topicTree .btn-outline-success.active {
+    background-color: #28a745;
+    color: white;
+}
+
+#topicTree .btn-outline-warning.active {
+    background-color: #ffc107;
+    color: black;
+}
+
+/* Cải thiện hiển thị công thức toán học */
+.mjx-chtml {
+    display: inline-block;
+    margin: 0 !important;
+    font-size: 100% !important;
+}
+
+/* Cải thiện hiển thị câu hỏi đã tạo */
+#generatedQuestions {
+    font-family: 'Times New Roman', Times, serif;
+    line-height: 1.5;
+}
+
+/* Định dạng responsive cho màn hình nhỏ */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    #topicTree, #generatedQuestions {
+        max-height: 400px;
+    }
 }
