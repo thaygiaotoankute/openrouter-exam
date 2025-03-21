@@ -57,6 +57,20 @@
     line-height: 1.5;
 }
 
+/* Định dạng cho hiển thị nội dung thô */
+.raw-content {
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    max-width: 100%;
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
 /* Định dạng responsive cho màn hình nhỏ */
 @media (max-width: 768px) {
     .container {
