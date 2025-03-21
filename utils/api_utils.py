@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
 import logging
+import traceback
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
@@ -26,6 +27,7 @@ def load_rsa_private_key_from_xml(xml_str):
         return key
     except Exception as e:
         logger.error(f"Error loading RSA key from XML: {str(e)}")
+        logger.error(traceback.format_exc())
         raise
 
 def decrypt_api_key(encrypted_key_base64, rsa_private_key):
@@ -40,16 +42,11 @@ def decrypt_api_key(encrypted_key_base64, rsa_private_key):
         return decrypted.decode('utf-8')
     except Exception as e:
         logger.error(f"Error decrypting API key: {str(e)}")
+        logger.error(traceback.format_exc())
         raise ValueError(f"Error decrypting API key: {str(e)}")
 
 def get_openrouter_token():
-    """Get API key từ biến môi trường hoặc từ GitHub"""
-    # Ưu tiên dùng biến môi trường để Vercel có thể cấu hình
-    if os.environ.get('OPENROUTER_API_KEY'):
-        logger.info("Using API key from environment variable")
-        return os.environ.get('OPENROUTER_API_KEY')
-    
-    # Nếu không có biến môi trường, dùng phương thức giải mã từ GitHub
+    """Get API key bằng phương thức giải mã RSA từ GitHub"""
     logger.info("Fetching encrypted API key from GitHub")
     PRIVATE_KEY_XML = """<RSAKeyValue>
 <Modulus>pWVItQwZ7NCPcBhSL4rqJrwh4OQquiPVtqTe4cqxO7o+UjYNzDPfLkfKAvR8k9ED4lq2TU11zEj8p2QZAM7obUlK4/HVexzfZd0qsXlCy5iaWoTQLXbVdzjvkC4mkO5TaX3Mpg/+p4oZjk1iS68tQFmju5cT19dcsPh554ICk8U=</Modulus>
@@ -63,23 +60,54 @@ def get_openrouter_token():
 </RSAKeyValue>"""
     
     try:
+        # Tải khóa RSA private key
+        logger.info("Loading RSA private key from XML")
         rsa_private_key = load_rsa_private_key_from_xml(PRIVATE_KEY_XML)
-        # Thay đổi URL để lấy API key của OpenRouter từ GitHub repo
+        
+        # Lấy encrypted key từ GitHub
         github_url = "https://raw.githubusercontent.com/thayphuctoan/pconvert/refs/heads/main/openrouter-key"
-        response = requests.get(github_url, timeout=10)
-        response.raise_for_status()
+        logger.info(f"Sending request to GitHub URL: {github_url}")
         
-        encrypted_keys = [line.strip() for line in response.text.splitlines() if line.strip()]
-        if not encrypted_keys:
-            raise ValueError("No encrypted API key found")
+        response = requests.get(github_url, timeout=30)  # Tăng timeout lên 30 giây
+        logger.info(f"GitHub response status code: {response.status_code}")
         
-        token = decrypt_api_key(encrypted_keys[0], rsa_private_key)
-        if not token:
-            raise ValueError("Decrypted API key is empty")
-        logger.info("Successfully obtained API key from GitHub")
-        return token
+        # Nếu response thành công
+        if response.status_code == 200:
+            logger.info(f"GitHub response content length: {len(response.text)} characters")
+            
+            # Lọc các dòng không trống
+            encrypted_keys = [line.strip() for line in response.text.splitlines() if line.strip()]
+            logger.info(f"Found {len(encrypted_keys)} encrypted keys")
+            
+            if not encrypted_keys:
+                logger.error("No encrypted API key found in the GitHub content")
+                raise ValueError("No encrypted API key found")
+            
+            # Lấy key đầu tiên và giải mã
+            logger.info("Decrypting the first encrypted key")
+            token = decrypt_api_key(encrypted_keys[0], rsa_private_key)
+            
+            if not token:
+                logger.error("Decrypted API key is empty")
+                raise ValueError("Decrypted API key is empty")
+            
+            # Kiểm tra key có hợp lệ không (có thể cải thiện thêm)
+            if len(token) < 10:  # Một API key thường dài hơn 10 ký tự
+                logger.warning(f"Decrypted API key seems too short: {len(token)} characters")
+            
+            logger.info(f"Successfully obtained API key from GitHub (length: {len(token)} characters)")
+            return token
+        else:
+            logger.error(f"Failed to get content from GitHub. Status code: {response.status_code}")
+            raise Exception(f"GitHub request failed with status code {response.status_code}")
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request to GitHub failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise Exception(f"Request to GitHub failed: {str(e)}")
     except Exception as e:
         logger.error(f"Error getting API key: {str(e)}")
+        logger.error(traceback.format_exc())
         raise Exception(f"Error getting API key: {str(e)}")
 
 def call_openrouter_api(prompt, max_tokens=4000, temperature=0.7):
@@ -87,7 +115,10 @@ def call_openrouter_api(prompt, max_tokens=4000, temperature=0.7):
     logger.info(f"Calling OpenRouter API with prompt length: {len(prompt)}")
     
     try:
+        # Lấy API key thông qua giải mã RSA
         api_key = get_openrouter_token()
+        logger.info("Successfully retrieved API key for OpenRouter")
+        
         api_url = "https://openrouter.ai/api/v1/chat/completions"
         model = "deepseek/deepseek-r1-zero:free"  # Hoặc model khác theo nhu cầu
         
@@ -109,15 +140,24 @@ def call_openrouter_api(prompt, max_tokens=4000, temperature=0.7):
         
         logger.info(f"Sending request to OpenRouter API for model: {model}")
         response = requests.post(api_url, headers=headers, json=data, timeout=180)
+        logger.info(f"OpenRouter API response status code: {response.status_code}")
+        
         response.raise_for_status()
         result = response.json()
         
         if 'choices' in result and len(result['choices']) > 0:
-            logger.info(f"Received response with {len(result['choices'][0]['message']['content'])} characters")
-            return result['choices'][0]['message']['content']
+            content = result['choices'][0]['message']['content']
+            logger.info(f"Received response with {len(content)} characters")
+            return content
         else:
             logger.warning("Empty or invalid response from OpenRouter API")
+            logger.warning(f"Response: {result}")
             return ""
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request to OpenRouter API failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise Exception(f"Request to OpenRouter API failed: {str(e)}")
     except Exception as e:
         logger.error(f"Error calling OpenRouter API: {str(e)}")
+        logger.error(traceback.format_exc())
         raise
